@@ -226,6 +226,12 @@
                 "description": "The boolean value indicating if the credentials are for a service principal."
             }
         },
+        "hostPoolRegistrationToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The registration token for a host pool."
+            }
+        },
         "aadTenantId": {
             "type": "string",
             "defaultValue": "",
