@@ -35,7 +35,10 @@ param(
 
     [Parameter(Mandatory = $false)]
     [AllowEmptyString()]
-    [string]$AadTenantId=""
+    [string]$AadTenantId="",
+
+    [Parameter(Mandatory = $false)]
+    [securestring]$hostPoolRegistrationToken=""
 )
 
 $ScriptPath = [system.io.path]::GetDirectoryName($PSCommandPath)
@@ -56,6 +59,10 @@ ExtractDeploymentAgentZipFile -ScriptPath $ScriptPath -DeployAgentLocation $Depl
 Write-Log -Message "Changing current folder to Deployagent folder: $DeployAgentLocation"
 Set-Location "$DeployAgentLocation"
 
+# Getting fqdn of rdsh vm
+$SessionHostName = (Get-WmiObject win32_computersystem).DNSHostName + "." + (Get-WmiObject win32_computersystem).Domain
+Write-Log  -Message "Getting fully qualified domain name of RDSH VM: $SessionHostName"
+
 # Checking if RDInfragent is registered or not in rdsh vm
 $CheckRegistry = Get-ItemProperty -Path "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\RDInfraAgent" -ErrorAction SilentlyContinue
 
@@ -69,103 +76,117 @@ else
 {
     Write-Log -Message "VM not registered with RDInfraAgent, script execution will continue"
 
-    # Importing Windows Virtual Desktop PowerShell module
-    Import-Module .\PowershellModules\Microsoft.RDInfra.RDPowershell.dll
-
-    Write-Log -Message "Imported Windows Virtual Desktop PowerShell modules successfully"
-
-    # Getting fqdn of rdsh vm
-    $SessionHostName = (Get-WmiObject win32_computersystem).DNSHostName + "." + (Get-WmiObject win32_computersystem).Domain
-    Write-Log  -Message "Getting fully qualified domain name of RDSH VM: $SessionHostName"
-
-    # Authenticating to Windows Virtual Desktop
-    if ($isServicePrincipal -eq "True")
-    {
-        Write-Log  -Message "Authenticating using service principal $TenantAdminCredentials.username and Tenant id: $AadTenantId "
-        $authentication = Add-RdsAccount -DeploymentUrl $RDBrokerURL -Credential $TenantAdminCredentials -ServicePrincipal -TenantId $AadTenantId 
-    }
-    else
-    {
-        Write-Log  -Message "Authenticating using user $($TenantAdminCredentials.username) "
-        $authentication = Add-RdsAccount -DeploymentUrl $RDBrokerURL -Credential $TenantAdminCredentials
-    }
-
-    Write-Log  -Message "Authentication object: $($authentication | Out-String)"
-    $obj = $authentication | Out-String
-
-    if ($authentication)
-    {
-        Write-Log -Message "Windows Virtual Desktop Authentication successfully Done. Result:`n$obj"  
-    }
-    else
-    {
-        Write-Log -Error "Windows Virtual Desktop Authentication Failed, Error:`n$obj"
-        throw "Windows Virtual Desktop Authentication Failed, Error:`n$obj"
-    }
-
-    # Set context to the appropriate tenant group
-    Write-Log "Running switching to the $definedTenantGroupName context"
-    if ($definedTenantGroupName -ne "Default Tenant Group") {
-        Set-RdsContext -TenantGroupName $definedTenantGroupName
-    }
-    try
-    {
-        $tenants = Get-RdsTenant -Name "$TenantName"
-        if (-Not $tenants)
-        {
-            Write-Log "No tenants exist or you do not have proper access."
-        }
-    }
-    catch
-    {
-        Write-Log -Message $_
-        throw $_
-    }
-
-    # Obtaining Registration Info
-    Start-Sleep (1..15 | Get-Random)
-    $Registered = New-RdsRegistrationInfo -TenantName "$TenantName" -HostPoolName "$HostPoolName" -ExpirationHours $Hours -ErrorAction SilentlyContinue
-    if (-Not $Registered)
-    {
-        $Registered = Export-RdsRegistrationInfo -TenantName "$TenantName" -HostPoolName "$HostPoolName" 
-        $obj =  $Registered | Out-String
-        Write-Log -Message "Exported Rds RegistrationInfo into variable 'Registered': $obj"
-    }
-    else
-    {
-        $obj =  $Registered | Out-String
-        Write-Log -Message "Created new Rds RegistrationInfo into variable 'Registered': $obj"
-    }
-
-    # Executing DeployAgent psl file in rdsh vm and add to hostpool
-    Write-Log "AgentInstaller is $DeployAgentLocation\RDAgentBootLoaderInstall, InfraInstaller is $DeployAgentLocation\RDInfraAgentInstall, SxS is $DeployAgentLocation\RDInfraSxSStackInstall"
-    $DAgentInstall = .\DeployAgent.ps1 -AgentBootServiceInstallerFolder "$DeployAgentLocation\RDAgentBootLoaderInstall" `
-                                       -AgentInstallerFolder "$DeployAgentLocation\RDInfraAgentInstall" `
-                                       -RegistrationToken $Registered.Token `
-                                       -StartAgent $true
+    # Checking to see if host pool registration token was entered. Empty string (meaning it did not get passed) results in 0.
+    # If it's zero, do all of the operations of logging in as RDS Owner / Contributor, to create the host pool, etc.
+    if( $hostPoolRegistrationToken.Lenght -eq 0) {
     
-    Write-Log -Message "DeployAgent Script was successfully executed and RDAgentBootLoader,RDAgent,StackSxS installed inside VM for existing hostpool: $HostPoolName`n$DAgentInstall"
+        # Importing Windows Virtual Desktop PowerShell module
+        Import-Module .\PowershellModules\Microsoft.RDInfra.RDPowershell.dll
 
-    # Get Session Host Info
-    Write-Log -Message "Getting rdsh host $SessionHostName information"
+        Write-Log -Message "Imported Windows Virtual Desktop PowerShell modules successfully"
 
-    [PsRdsSessionHost]$pssh = [PsRdsSessionHost]::new("$TenantName","$HostPoolName",$SessionHostName)
-    [Microsoft.RDInfra.RDManagementData.RdMgmtSessionHost]$rdsh = $pssh.GetSessionHost()
-    Write-Log -Message "RDSH object content: `n$($rdsh | Out-String)"
+        # Authenticating to Windows Virtual Desktop
+        if ($isServicePrincipal -eq "True")
+        {
+            Write-Log  -Message "Authenticating using service principal $TenantAdminCredentials.username and Tenant id: $AadTenantId "
+            $authentication = Add-RdsAccount -DeploymentUrl $RDBrokerURL -Credential $TenantAdminCredentials -ServicePrincipal -TenantId $AadTenantId 
+        }
+        else
+        {
+            Write-Log  -Message "Authenticating using user $($TenantAdminCredentials.username) "
+            $authentication = Add-RdsAccount -DeploymentUrl $RDBrokerURL -Credential $TenantAdminCredentials
+        }
 
-    $rdshName = $rdsh.SessionHostName | Out-String -Stream
-    $poolName = $rdsh.hostpoolname | Out-String -Stream
+        Write-Log  -Message "Authentication object: $($authentication | Out-String)"
+        $obj = $authentication | Out-String
 
-    Write-Log -Message "Waiting for session host return when in available status"
-    $AvailableSh =  $pssh.GetSessionHostWhenAvailable()
-    if ($AvailableSh -ne $null)
-    {
-        Write-Log -Message "Session host $($rdsh.SessionHostName) is now in Available state"
+        if ($authentication)
+        {
+            Write-Log -Message "Windows Virtual Desktop Authentication successfully Done. Result:`n$obj"  
+        }
+        else
+        {
+            Write-Log -Error "Windows Virtual Desktop Authentication Failed, Error:`n$obj"
+            throw "Windows Virtual Desktop Authentication Failed, Error:`n$obj"
+        }
+
+        # Set context to the appropriate tenant group
+        Write-Log "Running switching to the $definedTenantGroupName context"
+        if ($definedTenantGroupName -ne "Default Tenant Group") {
+            Set-RdsContext -TenantGroupName $definedTenantGroupName
+        }
+        try
+        {
+            $tenants = Get-RdsTenant -Name "$TenantName"
+            if (-Not $tenants)
+            {
+                Write-Log "No tenants exist or you do not have proper access."
+            }
+        }
+        catch
+        {
+            Write-Log -Message $_
+            throw $_
+        }
+
+        # Obtaining Registration Info
+        Start-Sleep (1..15 | Get-Random)
+        $Registered = New-RdsRegistrationInfo -TenantName "$TenantName" -HostPoolName "$HostPoolName" -ExpirationHours $Hours -ErrorAction SilentlyContinue
+        if (-Not $Registered)
+        {
+            $Registered = Export-RdsRegistrationInfo -TenantName "$TenantName" -HostPoolName "$HostPoolName" 
+            $obj =  $Registered | Out-String
+            Write-Log -Message "Exported Rds RegistrationInfo into variable 'Registered': $obj"
+        }
+        else
+        {
+            $obj =  $Registered | Out-String
+            Write-Log -Message "Created new Rds RegistrationInfo into variable 'Registered': $obj"
+        }
+
+        # Executing DeployAgent psl file in rdsh vm and add to hostpool
+        Write-Log "AgentInstaller is $DeployAgentLocation\RDAgentBootLoaderInstall, InfraInstaller is $DeployAgentLocation\RDInfraAgentInstall, SxS is $DeployAgentLocation\RDInfraSxSStackInstall"
+        $DAgentInstall = .\DeployAgent.ps1 -AgentBootServiceInstallerFolder "$DeployAgentLocation\RDAgentBootLoaderInstall" `
+                                        -AgentInstallerFolder "$DeployAgentLocation\RDInfraAgentInstall" `
+                                        -RegistrationToken $Registered.Token `
+                                        -StartAgent $true
+        
+        Write-Log -Message "DeployAgent Script was successfully executed and RDAgentBootLoader,RDAgent,StackSxS installed inside VM for existing hostpool: $HostPoolName`n$DAgentInstall"
+
+        # Get Session Host Info
+        Write-Log -Message "Getting rdsh host $SessionHostName information"
+
+        [PsRdsSessionHost]$pssh = [PsRdsSessionHost]::new("$TenantName","$HostPoolName",$SessionHostName)
+        [Microsoft.RDInfra.RDManagementData.RdMgmtSessionHost]$rdsh = $pssh.GetSessionHost()
+        Write-Log -Message "RDSH object content: `n$($rdsh | Out-String)"
+
+        $rdshName = $rdsh.SessionHostName | Out-String -Stream
+        $poolName = $rdsh.hostpoolname | Out-String -Stream
+
+        Write-Log -Message "Waiting for session host return when in available status"
+        $AvailableSh =  $pssh.GetSessionHostWhenAvailable()
+        if ($AvailableSh -ne $null)
+        {
+            Write-Log -Message "Session host $($rdsh.SessionHostName) is now in Available state"
+        }
+        else
+        {
+            Write-Log -Message "Session host $($rdsh.SessionHostName) not in Available state, wait timed out (threshold is $($rdsh.TimeoutInSec) seconds)"
+        }
+        
+        Write-Log -Message "Successfully added $rdshName VM to $poolName"
+    } 
+    
+    # This else indicates that the $hostPoolRegistrationInfo is not equal to zero, meaning it was passed in by the admin.
+    # In this scenario, run the DeployAgent Powershell script with the passed in Registration
+    else {        
+        # Executing DeployAgent psl file in rdsh vm and add to hostpool
+        Write-Log "AgentInstaller is $DeployAgentLocation\RDAgentBootLoaderInstall, InfraInstaller is $DeployAgentLocation\RDInfraAgentInstall, SxS is $DeployAgentLocation\RDInfraSxSStackInstall"
+        $DAgentInstall = .\DeployAgent.ps1 -AgentBootServiceInstallerFolder "$DeployAgentLocation\RDAgentBootLoaderInstall" `
+                                        -AgentInstallerFolder "$DeployAgentLocation\RDInfraAgentInstall" `
+                                        -RegistrationToken $hostPoolRegistrationToken `
+                                        -StartAgent $true
+
+        Write-Log -Message "Agent installed on $SessionHostName. Because a registration token was passed in to the script, unable to check the update status of the Agent. Please login to the Windows Virtual Desktop PowerShell manually to check."
     }
-    else
-    {
-        Write-Log -Message "Session host $($rdsh.SessionHostName) not in Available state, wait timed out (threshold is $($rdsh.TimeoutInSec) seconds)"
-    }
-     
-    Write-Log -Message "Successfully added $rdshName VM to $poolName"
 }

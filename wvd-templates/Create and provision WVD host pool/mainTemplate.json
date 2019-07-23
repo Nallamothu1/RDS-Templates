@@ -228,8 +228,9 @@
         },
         "hostPoolRegistrationToken": {
             "type": "securestring",
+            "defaultValue": "",
             "metadata": {
-                "description": "The registration token for a host pool."
+                "description": "The registration token for a host pool. Provide a valid registration token for a host pool instead of credentials."
             }
         },
         "aadTenantId": {
@@ -413,12 +414,14 @@
                         "isServicePrincipal": "[parameters('isServicePrincipal')]",
                         "AadTenantId": "[parameters('aadTenantId')]",
                         "EnablePersistentDesktop": "[parameters('enablePersistentDesktop')]",
-                        "defaultDesktopUsers": "[concat('\"',parameters('defaultDesktopUsers'),'\"')]"
+                        "defaultDesktopUsers": "[concat('\"',parameters('defaultDesktopUsers'),'\"')]",
+                        "hostPoolRegistrationToken": "PrivateSettingsRef:hostPoolRegistrationToken"
                     }
                 },
                 "ProtectedSettings": {
                     "items": {
-                        "tenantAdminPassword": "[parameters('tenantAdminPassword')]"
+                        "tenantAdminPassword": "[parameters('tenantAdminPassword')]",
+                        "hostPoolRegistrationToken": "[parameters('hostPoolRegistrationToken')]"
                     }
                 }
             }
@@ -455,12 +458,14 @@
                         "HostPoolName": "[variables('hostPoolName')]",
                         "Hours": "[variables('registrationExpirationHours')]",
                         "isServicePrincipal": "[parameters('isServicePrincipal')]",
-                        "AadTenantId": "[parameters('aadTenantId')]"
+                        "AadTenantId": "[parameters('aadTenantId')]",
+                        "hostPoolRegistrationToken": "PrivateSettingsRef:hostPoolRegistrationToken"
                     }
                 },
                 "ProtectedSettings": {
                     "items": {
-                        "tenantAdminPassword": "[parameters('tenantAdminPassword')]"
+                        "tenantAdminPassword": "[parameters('tenantAdminPassword')]",
+                        "hostPoolRegistrationToken": "[parameters('hostPoolRegistrationToken')]"
                     }
                 }
             }
