@@ -50,7 +50,7 @@ param(
     [string]$DefaultDesktopUsers="",
 
     [Parameter(Mandatory = $false)]
-    [securestring]$hostPoolRegistrationToken=""
+    [string]$hostPoolRegistrationToken=""
 )
 
 $ScriptPath = [system.io.path]::GetDirectoryName($PSCommandPath)

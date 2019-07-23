@@ -227,7 +227,7 @@
             }
         },
         "hostPoolRegistrationToken": {
-            "type": "securestring",
+            "type": "string",
             "defaultValue": "",
             "metadata": {
                 "description": "The registration token for a host pool. Provide a valid registration token for a host pool instead of credentials."
@@ -415,13 +415,12 @@
                         "AadTenantId": "[parameters('aadTenantId')]",
                         "EnablePersistentDesktop": "[parameters('enablePersistentDesktop')]",
                         "defaultDesktopUsers": "[concat('\"',parameters('defaultDesktopUsers'),'\"')]",
-                        "hostPoolRegistrationToken": "PrivateSettingsRef:hostPoolRegistrationToken"
+                        "hostPoolRegistrationToken": "[parameters('hostPoolRegistrationToken')]"
                     }
                 },
                 "ProtectedSettings": {
                     "items": {
-                        "tenantAdminPassword": "[parameters('tenantAdminPassword')]",
-                        "hostPoolRegistrationToken": "[parameters('hostPoolRegistrationToken')]"
+                        "tenantAdminPassword": "[parameters('tenantAdminPassword')]"
                     }
                 }
             }
@@ -459,13 +458,12 @@
                         "Hours": "[variables('registrationExpirationHours')]",
                         "isServicePrincipal": "[parameters('isServicePrincipal')]",
                         "AadTenantId": "[parameters('aadTenantId')]",
-                        "hostPoolRegistrationToken": "PrivateSettingsRef:hostPoolRegistrationToken"
+                        "hostPoolRegistrationToken": "[parameters('hostPoolRegistrationToken')]"
                     }
                 },
                 "ProtectedSettings": {
                     "items": {
-                        "tenantAdminPassword": "[parameters('tenantAdminPassword')]",
-                        "hostPoolRegistrationToken": "[parameters('hostPoolRegistrationToken')]"
+                        "tenantAdminPassword": "[parameters('tenantAdminPassword')]"
                     }
                 }
             }

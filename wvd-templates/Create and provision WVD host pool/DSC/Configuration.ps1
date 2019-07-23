@@ -37,7 +37,10 @@ configuration FirstSessionHost
         [string]$EnablePersistentDesktop = "False",
 
         [Parameter(Mandatory = $true)]
-        [string]$DefaultDesktopUsers
+        [string]$DefaultDesktopUsers,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$hostPoolRegistrationToken=""
     )
 
     $rdshIsServer = $true
@@ -112,7 +115,10 @@ configuration AdditionalSessionHosts
         [string]$IsServicePrincipal = "False",
     
         [Parameter(Mandatory = $false)]
-        [string]$AadTenantId = ""
+        [string]$AadTenantId = "",
+
+        [Parameter(Mandatory = $false)]
+        [string]$hostPoolRegistrationToken=""
     )
 
 
