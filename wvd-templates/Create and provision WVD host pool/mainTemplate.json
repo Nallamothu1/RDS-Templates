@@ -415,7 +415,7 @@
                         "AadTenantId": "[parameters('aadTenantId')]",
                         "EnablePersistentDesktop": "[parameters('enablePersistentDesktop')]",
                         "defaultDesktopUsers": "[concat('\"',parameters('defaultDesktopUsers'),'\"')]",
-                        "hostPoolRegistrationToken": "[parameters('hostPoolRegistrationToken')]"
+                        "hostPoolRegistrationToken": "[concat('\"',parameters('hostPoolRegistrationToken'),'\"')]"
                     }
                 },
                 "ProtectedSettings": {
