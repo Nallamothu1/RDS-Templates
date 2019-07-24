@@ -78,8 +78,10 @@ else
 
     # Checking to see if host pool registration token was entered. Empty string (meaning it did not get passed) results in 0.
     # If it's zero, do all of the operations of logging in as RDS Owner / Contributor, to create the host pool, etc.
-    if( $hostPoolRegistrationToken.Lenght -eq 0) {
+    if( $hostPoolRegistrationToken.Length -eq 0) {
     
+        Write-Log -Message "Registering VM by logging into Windows Virtual Desktop with the credentials provided"
+
         # Importing Windows Virtual Desktop PowerShell module
         Import-Module .\PowershellModules\Microsoft.RDInfra.RDPowershell.dll
 
@@ -181,6 +183,8 @@ else
     # In this scenario, run the DeployAgent Powershell script with the passed in Registration
     else {        
         # Executing DeployAgent psl file in rdsh vm and add to hostpool
+
+        Write-Log -Message "Registering VM with registration token that was passed in as a parameter"
         Write-Log "AgentInstaller is $DeployAgentLocation\RDAgentBootLoaderInstall, InfraInstaller is $DeployAgentLocation\RDInfraAgentInstall, SxS is $DeployAgentLocation\RDInfraSxSStackInstall"
         $DAgentInstall = .\DeployAgent.ps1 -AgentBootServiceInstallerFolder "$DeployAgentLocation\RDAgentBootLoaderInstall" `
                                         -AgentInstallerFolder "$DeployAgentLocation\RDInfraAgentInstall" `
