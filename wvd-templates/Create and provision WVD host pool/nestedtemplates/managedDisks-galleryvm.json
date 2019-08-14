@@ -199,11 +199,11 @@
                         "enabled": false
                     }
                 },
-                "identity": {
-                    "type": "systemAssigned"
-                },
                 "licenseType": "Windows_Client"
-            }
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
         }
     ],
     "outputs": {}
