@@ -348,33 +348,23 @@
             }
         },
         {
-            "apiVersion": "2018-10-01",
+            "name": "[concat(variables('rdshPrefix'), copyindex(),'/', variables('aadLoginExtensionName'))]",
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(variables('rdshPrefix'), copyindex(),'/', 'joindomain')]",
+            "apiVersion": "2018-10-01",
             "location": "[parameters('location')]",
-            "dependsOn": [
-                "vmCreation-linkedTemplate"
-            ],
             "copy": {
-                "name": "rdsh-domain-join-loop",
+                "name": "aad-domain-join-loop",
                 "count": "[parameters('rdshNumberOfInstances')]"
             },
             "properties": {
-                "publisher": "Microsoft.Compute",
-                "type": "JsonADDomainExtension",
-                "typeHandlerVersion": "1.3",
-                "autoUpgradeMinorVersion": true,
-                "settings": {
-                    "name": "[parameters('domainToJoin')]",
-                    "ouPath": "[parameters('ouPath')]",
-                    "user": "[parameters('existingDomainUPN')]",
-                    "restart": "true",
-                    "options": "3"
-                },
-                "protectedSettings": {
-                    "password": "[parameters('existingDomainPassword')]"
-                }
-            }
+                "publisher": "Microsoft.Azure.ActiveDirectory",
+                "type": "AADLoginForWindows",
+                "typeHandlerVersion": "0.3",
+                "autoUpgradeMinorVersion": true
+            },
+            "dependsOn": [
+                "vmCreation-linkedTemplate"
+            ]
         },
         {
             "apiVersion": "2018-10-01",
@@ -382,7 +372,7 @@
             "name": "[concat(variables('rdshPrefix'), '0/', 'dscextension')]",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "rdsh-domain-join-loop"
+                "aad-domain-join-loop"
             ],
             "properties": {
                 "publisher": "Microsoft.Powershell",
