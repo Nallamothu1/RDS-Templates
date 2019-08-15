@@ -348,7 +348,7 @@
             }
         },
         {
-            "name": "[concat(variables('rdshPrefix'), copyindex(),'/', variables('aadLoginExtensionName'))]",
+            "name": "[concat(variables('rdshPrefix'), copyindex(),'/', 'AADLoginForWindows')]",
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "apiVersion": "2018-10-01",
             "location": "[parameters('location')]",
